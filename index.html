@@ -1,0 +1,875 @@
+<!DOCTYPE html>
+<html lang="hi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Secure Chat Application</title>
+    <style>
+        :root {
+            --primary: #1a237e;
+            --secondary: #2962ff;
+            --accent: #ff5252;
+            --success: #00c853;
+            --warning: #ffab00;
+            --light: #f5f7ff;
+            --dark: #0d1b2a;
+            --white: #ffffff;
+            --admin-color: #7b1fa2;
+            --user-color: #2962ff;
+            --gradient: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        }
+        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+        
+        body {
+            background: var(--gradient);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+        
+        .container {
+            width: 100%;
+            max-width: 450px;
+            background: var(--white);
+            border-radius: 20px;
+            box-shadow: 0 25px 50px rgba(0,0,0,0.15);
+            overflow: hidden;
+            animation: slideUp 0.5s ease-out;
+        }
+        
+        @keyframes slideUp {
+            from {
+                opacity: 0;
+                transform: translateY(30px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+        
+        .header {
+            background: var(--primary);
+            color: var(--white);
+            padding: 2rem;
+            text-align: center;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .header h1 {
+            font-size: 2rem;
+            margin-bottom: 0.5rem;
+        }
+        
+        .header p {
+            opacity: 0.9;
+            font-size: 1rem;
+        }
+        
+        .auth-container {
+            padding: 2.5rem;
+        }
+        
+        .form-group {
+            margin-bottom: 1.5rem;
+        }
+        
+        .form-group label {
+            display: block;
+            margin-bottom: 0.5rem;
+            font-weight: 600;
+            color: var(--dark);
+        }
+        
+        .form-control {
+            width: 100%;
+            padding: 1rem;
+            border: 2px solid #e3f2fd;
+            border-radius: 10px;
+            font-size: 1rem;
+            background: #fafbff;
+        }
+        
+        .form-control:focus {
+            outline: none;
+            border-color: var(--secondary);
+        }
+        
+        .btn {
+            background: var(--secondary);
+            color: var(--white);
+            border: none;
+            padding: 1rem 1.5rem;
+            border-radius: 10px;
+            cursor: pointer;
+            font-size: 1rem;
+            font-weight: 600;
+            width: 100%;
+            transition: all 0.3s;
+        }
+        
+        .btn:hover {
+            background: #1565c0;
+        }
+        
+        .btn-admin {
+            background: var(--admin-color);
+        }
+        
+        .btn-admin:hover {
+            background: #6a1b9a;
+        }
+        
+        .auth-tabs {
+            display: flex;
+            margin-bottom: 2rem;
+            border-radius: 10px;
+            overflow: hidden;
+            background: var(--light);
+        }
+        
+        .auth-tab {
+            flex: 1;
+            padding: 1rem;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s;
+            font-weight: 600;
+        }
+        
+        .auth-tab.active {
+            background: var(--secondary);
+            color: var(--white);
+        }
+        
+        .auth-form {
+            display: none;
+        }
+        
+        .auth-form.active {
+            display: block;
+        }
+        
+        .chat-container {
+            display: none;
+            height: 80vh;
+            flex-direction: column;
+        }
+        
+        .chat-header {
+            background: var(--primary);
+            color: var(--white);
+            padding: 1rem 1.5rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .user-info {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .user-avatar {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background: var(--secondary);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: bold;
+        }
+        
+        .admin-avatar {
+            background: var(--admin-color);
+        }
+        
+        .logout-btn {
+            background: var(--accent);
+            color: white;
+            border: none;
+            padding: 0.5rem 1rem;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+        
+        .chat-messages {
+            flex: 1;
+            padding: 1rem;
+            overflow-y: auto;
+            background: #f8faff;
+            display: flex;
+            flex-direction: column;
+        }
+        
+        .message {
+            margin-bottom: 1rem;
+            padding: 0.8rem 1rem;
+            border-radius: 15px;
+            max-width: 80%;
+            word-wrap: break-word;
+        }
+        
+        .message.admin {
+            background: var(--admin-color);
+            color: white;
+            align-self: flex-end;
+            border-bottom-right-radius: 5px;
+        }
+        
+        .message.user {
+            background: var(--user-color);
+            color: white;
+            align-self: flex-start;
+            border-bottom-left-radius: 5px;
+        }
+        
+        .message-sender {
+            font-size: 0.8rem;
+            opacity: 0.9;
+            margin-bottom: 0.3rem;
+        }
+        
+        .message-time {
+            font-size: 0.7rem;
+            opacity: 0.7;
+            text-align: right;
+            margin-top: 0.3rem;
+        }
+        
+        .chat-input-container {
+            padding: 1rem;
+            background: var(--white);
+            border-top: 1px solid #e0e0e0;
+            display: flex;
+            gap: 10px;
+            align-items: center;
+        }
+        
+        .chat-input {
+            flex: 1;
+            padding: 0.8rem 1rem;
+            border: 2px solid #e0e0e0;
+            border-radius: 20px;
+            font-size: 1rem;
+            outline: none;
+        }
+        
+        .chat-input:focus {
+            border-color: var(--secondary);
+        }
+        
+        .send-btn {
+            background: var(--secondary);
+            color: white;
+            border: none;
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.3s;
+        }
+        
+        .send-btn:hover {
+            background: #1565c0;
+            transform: scale(1.1);
+        }
+        
+        .notification {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            padding: 1rem 1.5rem;
+            border-radius: 8px;
+            color: white;
+            z-index: 1000;
+            display: none;
+        }
+        
+        .notification.success {
+            background: var(--success);
+        }
+        
+        .notification.error {
+            background: var(--accent);
+        }
+        
+        .users-online {
+            background: var(--light);
+            padding: 0.5rem 1rem;
+            font-size: 0.9rem;
+            color: var(--dark);
+            border-bottom: 1px solid #e0e0e0;
+        }
+        
+        .welcome-message {
+            text-align: center;
+            padding: 2rem;
+            color: #666;
+        }
+        
+        .message-help {
+            background: #e3f2fd;
+            padding: 1rem;
+            margin: 1rem;
+            border-radius: 10px;
+            text-align: center;
+            font-size: 0.9rem;
+            color: var(--dark);
+        }
+    </style>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+</head>
+<body>
+    <div class="container">
+        <!-- Authentication Section -->
+        <div class="header">
+            <h1><i class="fas fa-comments"></i> Secure Chat</h1>
+            <p>Admin aur Users ke beech safe communication</p>
+        </div>
+        
+        <div class="auth-container" id="auth-container">
+            <div class="auth-tabs">
+                <div class="auth-tab active" data-tab="user-login">User Login</div>
+                <div class="auth-tab" data-tab="user-signup">User Signup</div>
+                <div class="auth-tab" data-tab="admin-login">Admin Login</div>
+            </div>
+            
+            <!-- User Login Form -->
+            <form id="user-login-form" class="auth-form active">
+                <div class="form-group">
+                    <label for="user-email">Email Address</label>
+                    <input type="email" id="user-email" class="form-control" placeholder="user@example.com" required>
+                </div>
+                <div class="form-group">
+                    <label for="user-password">Password</label>
+                    <input type="password" id="user-password" class="form-control" placeholder="Enter password" required>
+                </div>
+                <button type="submit" class="btn">User Login</button>
+            </form>
+            
+            <!-- User Signup Form -->
+            <form id="user-signup-form" class="auth-form">
+                <div class="form-group">
+                    <label for="signup-name">Full Name</label>
+                    <input type="text" id="signup-name" class="form-control" placeholder="John Doe" required>
+                </div>
+                <div class="form-group">
+                    <label for="signup-email">Email Address</label>
+                    <input type="email" id="signup-email" class="form-control" placeholder="user@example.com" required>
+                </div>
+                <div class="form-group">
+                    <label for="signup-password">Password</label>
+                    <input type="password" id="signup-password" class="form-control" placeholder="Create password" required>
+                </div>
+                <button type="submit" class="btn">Create Account</button>
+            </form>
+            
+            <!-- Admin Login Form -->
+            <form id="admin-login-form" class="auth-form">
+                <div class="form-group">
+                    <label for="admin-email">Admin Email</label>
+                    <input type="email" id="admin-email" class="form-control" value="faizbabu1212@gmail.com" readonly>
+                </div>
+                <div class="form-group">
+                    <label for="admin-password">Admin Password</label>
+                    <input type="password" id="admin-password" class="form-control" placeholder="Enter admin password" required>
+                </div>
+                <button type="submit" class="btn btn-admin">Admin Login</button>
+            </form>
+        </div>
+        
+        <!-- Chat Section -->
+        <div class="chat-container" id="chat-container">
+            <div class="chat-header">
+                <div class="user-info">
+                    <div class="user-avatar" id="user-avatar">
+                        <i class="fas fa-user"></i>
+                    </div>
+                    <div>
+                        <div id="current-user-name">User</div>
+                        <div style="font-size: 0.8rem; opacity: 0.8;" id="user-role">User</div>
+                    </div>
+                </div>
+                <button class="logout-btn" id="logout-btn">
+                    <i class="fas fa-sign-out-alt"></i> Logout
+                </button>
+            </div>
+            
+            <div class="users-online">
+                Online Users: <span id="online-count">0</span>
+            </div>
+            
+            <div class="chat-messages" id="chat-messages">
+                <div class="welcome-message">
+                    <i class="fas fa-comments" style="font-size: 3rem; margin-bottom: 1rem;"></i>
+                    <h3>Welcome to Secure Chat!</h3>
+                    <p>Start a conversation by sending a message below</p>
+                </div>
+                <div class="message-help">
+                    <strong>How to send messages:</strong><br>
+                    1. Type your message in the input box below<br>
+                    2. Click Send button or press Enter key<br>
+                    3. Your message will appear here instantly!
+                </div>
+            </div>
+            
+            <!-- MESSAGE INPUT SECTION - YEH IMPORTANT HAI -->
+            <div class="chat-input-container">
+                <input type="text" class="chat-input" id="chat-input" placeholder="Type your message here...">
+                <button class="send-btn" id="send-btn">
+                    <i class="fas fa-paper-plane"></i>
+                </button>
+            </div>
+        </div>
+    </div>
+    
+    <div class="notification" id="notification"></div>
+
+    <!-- Firebase SDK -->
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/12.3.0/firebase-app.js";
+        import { getDatabase, ref, set, onValue, push, remove, update, get } from "https://www.gstatic.com/firebasejs/12.3.0/firebase-database.js";
+
+        const firebaseConfig = {
+            apiKey: "AIzaSyC3lpqr7Gb6c3JhIeG2ZQDfqegroWGOvrw",
+            authDomain: "world-of-cybersecurity-e3869.firebaseapp.com",
+            databaseURL: "https://world-of-cybersecurity-e3869-default-rtdb.firebaseio.com",
+            projectId: "world-of-cybersecurity-e3869",
+            storageBucket: "world-of-cybersecurity-e3869.firebasestorage.app",
+            messagingSenderId: "570763000275",
+            appId: "1:570763000275:web:7986f21cb9d5206d961726",
+            measurementId: "G-NPRVC9JSC5"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const database = getDatabase(app);
+
+        window.firebaseDatabase = database;
+        window.firebaseRef = ref;
+        window.firebaseSet = set;
+        window.firebaseOnValue = onValue;
+        window.firebasePush = push;
+        window.firebaseRemove = remove;
+        window.firebaseUpdate = update;
+        window.firebaseGet = get;
+    </script>
+
+    <script>
+        // Admin credentials
+        const ADMIN_EMAIL = "faizbabu1212@gmail.com";
+        const ADMIN_PASSWORD = "admin@123";
+        
+        // Global variables
+        let currentUser = null;
+        let users = [];
+        let messages = [];
+        
+        // Initialize the application
+        document.addEventListener('DOMContentLoaded', function() {
+            console.log("Chat App Started");
+            setupEventListeners();
+            loadUsers();
+            checkExistingSession();
+        });
+        
+        // Setup event listeners
+        function setupEventListeners() {
+            // Auth tabs
+            document.querySelectorAll('.auth-tab').forEach(tab => {
+                tab.addEventListener('click', function() {
+                    const tabName = this.getAttribute('data-tab');
+                    switchAuthTab(tabName);
+                });
+            });
+            
+            // User login form
+            document.getElementById('user-login-form').addEventListener('submit', function(e) {
+                e.preventDefault();
+                userLogin();
+            });
+            
+            // User signup form
+            document.getElementById('user-signup-form').addEventListener('submit', function(e) {
+                e.preventDefault();
+                userSignup();
+            });
+            
+            // Admin login form
+            document.getElementById('admin-login-form').addEventListener('submit', function(e) {
+                e.preventDefault();
+                adminLogin();
+            });
+            
+            // Logout button
+            document.getElementById('logout-btn').addEventListener('click', function() {
+                logout();
+            });
+            
+            // Send message - YEH IMPORTANT HAI
+            document.getElementById('send-btn').addEventListener('click', sendMessage);
+            document.getElementById('chat-input').addEventListener('keypress', function(e) {
+                if (e.key === 'Enter') {
+                    sendMessage();
+                }
+            });
+        }
+        
+        // Switch between auth tabs
+        function switchAuthTab(tabName) {
+            // Update tabs
+            document.querySelectorAll('.auth-tab').forEach(tab => {
+                tab.classList.remove('active');
+            });
+            document.querySelector(`[data-tab="${tabName}"]`).classList.add('active');
+            
+            // Update forms
+            document.querySelectorAll('.auth-form').forEach(form => {
+                form.classList.remove('active');
+            });
+            document.getElementById(`${tabName}-form`).classList.add('active');
+        }
+        
+        // User login
+        async function userLogin() {
+            const email = document.getElementById('user-email').value;
+            const password = document.getElementById('user-password').value;
+            
+            console.log("User login attempt:", email);
+            
+            if (!email || !password) {
+                showNotification('Please fill all fields!', 'error');
+                return;
+            }
+
+            try {
+                const usersRef = window.firebaseRef(window.firebaseDatabase, 'users');
+                const snapshot = await window.firebaseGet(usersRef);
+                const usersData = snapshot.val();
+                
+                if (usersData) {
+                    users = Object.values(usersData);
+                    const user = users.find(u => u.email === email && u.password === password);
+                    
+                    if (user) {
+                        currentUser = {
+                            id: user.id,
+                            name: user.name,
+                            email: user.email,
+                            role: 'user'
+                        };
+                        
+                        localStorage.setItem('chatUser', JSON.stringify(currentUser));
+                        showChatInterface();
+                        showNotification('Login successful! Welcome ' + user.name, 'success');
+                    } else {
+                        showNotification('Invalid email or password!', 'error');
+                    }
+                } else {
+                    showNotification('No users found! Please sign up first.', 'error');
+                }
+            } catch (error) {
+                console.error("Login error:", error);
+                showNotification('Login failed! Please try again.', 'error');
+            }
+        }
+        
+        // User signup
+        async function userSignup() {
+            const name = document.getElementById('signup-name').value;
+            const email = document.getElementById('signup-email').value;
+            const password = document.getElementById('signup-password').value;
+            
+            console.log("User signup attempt:", email);
+            
+            if (!name || !email || !password) {
+                showNotification('Please fill all required fields!', 'error');
+                return;
+            }
+
+            try {
+                const usersRef = window.firebaseRef(window.firebaseDatabase, 'users');
+                const snapshot = await window.firebaseGet(usersRef);
+                const usersData = snapshot.val();
+                
+                if (usersData && Object.values(usersData).find(u => u.email === email)) {
+                    showNotification('User already exists with this email!', 'error');
+                    return;
+                }
+                
+                const newUser = {
+                    id: Date.now().toString(),
+                    name: name,
+                    email: email,
+                    password: password,
+                    createdAt: new Date().toISOString()
+                };
+                
+                const userRef = window.firebaseRef(window.firebaseDatabase, `users/${newUser.id}`);
+                await window.firebaseSet(userRef, newUser);
+                
+                showNotification('Account created successfully! Please login.', 'success');
+                switchAuthTab('user-login');
+                document.getElementById('user-email').value = email;
+                document.getElementById('user-signup-form').reset();
+                
+            } catch (error) {
+                console.error("Signup error:", error);
+                showNotification('Error creating account!', 'error');
+            }
+        }
+        
+        // Admin login
+        function adminLogin() {
+            const email = document.getElementById('admin-email').value;
+            const password = document.getElementById('admin-password').value;
+            
+            console.log("Admin login attempt");
+            
+            if (email === ADMIN_EMAIL && password === ADMIN_PASSWORD) {
+                currentUser = {
+                    id: 'admin',
+                    name: 'Admin',
+                    email: email,
+                    role: 'admin'
+                };
+                
+                localStorage.setItem('chatUser', JSON.stringify(currentUser));
+                showChatInterface();
+                showNotification('Admin login successful!', 'success');
+            } else {
+                showNotification('Invalid admin credentials!', 'error');
+            }
+        }
+        
+        // Logout
+        function logout() {
+            if (currentUser) {
+                updateOnlineStatus(false);
+            }
+            
+            currentUser = null;
+            localStorage.removeItem('chatUser');
+            
+            document.getElementById('auth-container').style.display = 'block';
+            document.getElementById('chat-container').style.display = 'none';
+            document.getElementById('chat-messages').innerHTML = `
+                <div class="welcome-message">
+                    <i class="fas fa-comments" style="font-size: 3rem; margin-bottom: 1rem;"></i>
+                    <h3>Welcome to Secure Chat!</h3>
+                    <p>Start a conversation by sending a message below</p>
+                </div>
+                <div class="message-help">
+                    <strong>How to send messages:</strong><br>
+                    1. Type your message in the input box below<br>
+                    2. Click Send button or press Enter key<br>
+                    3. Your message will appear here instantly!
+                </div>
+            `;
+            document.getElementById('chat-input').value = '';
+            
+            showNotification('Logged out successfully!', 'success');
+        }
+        
+        // Show chat interface
+        function showChatInterface() {
+            document.getElementById('auth-container').style.display = 'none';
+            document.getElementById('chat-container').style.display = 'flex';
+            
+            // Update user info
+            document.getElementById('current-user-name').textContent = currentUser.name;
+            document.getElementById('user-role').textContent = currentUser.role === 'admin' ? 'Administrator' : 'User';
+            
+            const avatar = document.getElementById('user-avatar');
+            avatar.innerHTML = currentUser.role === 'admin' ? 
+                '<i class="fas fa-shield-alt"></i>' : 
+                '<i class="fas fa-user"></i>';
+            avatar.className = `user-avatar ${currentUser.role === 'admin' ? 'admin-avatar' : ''}`;
+            
+            // Load messages
+            loadMessages();
+            updateOnlineStatus(true);
+        }
+        
+        // Load users from Firebase
+        function loadUsers() {
+            const usersRef = window.firebaseRef(window.firebaseDatabase, 'users');
+            window.firebaseOnValue(usersRef, (snapshot) => {
+                const data = snapshot.val();
+                users = data ? Object.values(data) : [];
+                updateOnlineUsers();
+            });
+        }
+        
+        // Load messages from Firebase
+        function loadMessages() {
+            const messagesRef = window.firebaseRef(window.firebaseDatabase, 'messages');
+            window.firebaseOnValue(messagesRef, (snapshot) => {
+                const data = snapshot.val();
+                messages = data ? Object.values(data) : [];
+                renderMessages();
+                
+                // Auto scroll to bottom
+                setTimeout(() => {
+                    const messagesContainer = document.getElementById('chat-messages');
+                    messagesContainer.scrollTop = messagesContainer.scrollHeight;
+                }, 100);
+            });
+        }
+        
+        // Send message - YEH MAIN FUNCTION HAI
+        function sendMessage() {
+            const input = document.getElementById('chat-input');
+            const messageText = input.value.trim();
+            
+            console.log("Sending message:", messageText);
+            
+            if (!messageText) {
+                showNotification('Please type a message first!', 'error');
+                return;
+            }
+            
+            if (!currentUser) {
+                showNotification('Please login first!', 'error');
+                return;
+            }
+            
+            const message = {
+                id: Date.now().toString(),
+                text: messageText,
+                senderId: currentUser.id,
+                senderName: currentUser.name,
+                senderRole: currentUser.role,
+                timestamp: new Date().toISOString()
+            };
+            
+            // Save message to Firebase
+            const messageRef = window.firebaseRef(window.firebaseDatabase, `messages/${message.id}`);
+            window.firebaseSet(messageRef, message)
+                .then(() => {
+                    console.log("Message sent successfully");
+                    input.value = '';
+                    input.focus();
+                })
+                .catch(error => {
+                    console.error("Send message error:", error);
+                    showNotification('Error sending message!', 'error');
+                });
+        }
+        
+        // Render messages
+        function renderMessages() {
+            const container = document.getElementById('chat-messages');
+            
+            if (messages.length === 0) {
+                container.innerHTML = `
+                    <div class="welcome-message">
+                        <i class="fas fa-comments" style="font-size: 3rem; margin-bottom: 1rem;"></i>
+                        <h3>No messages yet</h3>
+                        <p>Be the first to start the conversation!</p>
+                    </div>
+                    <div class="message-help">
+                        <strong>How to send messages:</strong><br>
+                        1. Type your message in the input box below<br>
+                        2. Click Send button or press Enter key<br>
+                        3. Your message will appear here instantly!
+                    </div>
+                `;
+                return;
+            }
+            
+            container.innerHTML = '';
+            
+            // Sort messages by timestamp
+            messages.sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp));
+            
+            messages.forEach(message => {
+                const messageDiv = document.createElement('div');
+                messageDiv.className = `message ${message.senderRole}`;
+                
+                const time = new Date(message.timestamp).toLocaleTimeString([], { 
+                    hour: '2-digit', 
+                    minute: '2-digit' 
+                });
+                
+                messageDiv.innerHTML = `
+                    <div class="message-sender">
+                        ${message.senderName} ${message.senderRole === 'admin' ? '👑' : ''}
+                    </div>
+                    <div class="message-text">${message.text}</div>
+                    <div class="message-time">${time}</div>
+                `;
+                
+                container.appendChild(messageDiv);
+            });
+        }
+        
+        // Update online status
+        function updateOnlineStatus(isOnline) {
+            if (!currentUser) return;
+            
+            const onlineRef = window.firebaseRef(window.firebaseDatabase, `online/${currentUser.id}`);
+            window.firebaseSet(onlineRef, isOnline ? {
+                userId: currentUser.id,
+                userName: currentUser.name,
+                role: currentUser.role,
+                lastSeen: new Date().toISOString()
+            } : null);
+        }
+        
+        // Update online users list
+        function updateOnlineUsers() {
+            const onlineRef = window.firebaseRef(window.firebaseDatabase, 'online');
+            window.firebaseOnValue(onlineRef, (snapshot) => {
+                const data = snapshot.val();
+                const onlineUsers = data ? Object.values(data) : [];
+                document.getElementById('online-count').textContent = onlineUsers.length;
+            });
+        }
+        
+        // Check existing session
+        function checkExistingSession() {
+            const savedUser = localStorage.getItem('chatUser');
+            if (savedUser) {
+                currentUser = JSON.parse(savedUser);
+                console.log("Existing session found:", currentUser);
+                showChatInterface();
+            }
+        }
+        
+        // Show notification
+        function showNotification(message, type) {
+            const notification = document.getElementById('notification');
+            notification.textContent = message;
+            notification.className = `notification ${type}`;
+            notification.style.display = 'block';
+            
+            setTimeout(() => {
+                notification.style.display = 'none';
+            }, 3000);
+        }
+        
+        // Handle page unload
+        window.addEventListener('beforeunload', function() {
+            if (currentUser) {
+                updateOnlineStatus(false);
+            }
+        });
+    </script>
+</body>
+</html>
