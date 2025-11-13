@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Secure Chat Application</title>
+    <script src="https://accounts.google.com/gsi/client" async defer></script>
     <style>
         :root {
             --primary: #1a237e;
@@ -343,6 +344,77 @@
             border-radius: 5px;
             font-size: 0.8rem;
         }
+
+        /* Google Sign-In Styles */
+        .google-signin-container {
+            margin: 1.5rem 0;
+        }
+
+        .google-btn-wrapper {
+            display: flex;
+            justify-content: center;
+            margin: 1rem 0;
+            min-height: 44px;
+        }
+
+        .divider {
+            display: flex;
+            align-items: center;
+            margin: 1.5rem 0;
+            color: #666;
+            font-size: 0.9rem;
+            position: relative;
+        }
+
+        .divider::before,
+        .divider::after {
+            content: "";
+            flex: 1;
+            border-bottom: 1px solid #e0e0e0;
+        }
+
+        .divider span {
+            padding: 0 1rem;
+            background: white;
+            color: #666;
+            font-weight: 500;
+        }
+
+        /* Fallback Google Button */
+        .google-btn-custom {
+            background: white;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            padding: 12px 24px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            font-weight: 600;
+            color: #3c4043;
+            transition: all 0.3s ease;
+            width: 100%;
+            max-width: 280px;
+            justify-content: center;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            font-size: 14px;
+        }
+
+        .google-btn-custom:hover {
+            background: #f8f9fa;
+            border-color: #dadce0;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            transform: translateY(-1px);
+        }
+
+        .google-btn-custom:active {
+            transform: translateY(0);
+        }
+
+        .google-icon {
+            width: 18px;
+            height: 18px;
+        }
     </style>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
 </head>
@@ -356,7 +428,8 @@
         
         <div class="auth-container" id="auth-container">
             <div class="security-warning">
-                <i class="fas fa-shield-alt"></i> Secure Login - All data is encrypted
+                <i class="fas fa-shield-alt"></i> Secure Login - All data is encrypted | 
+                <i class="fab fa-google"></i> Google Sign-In Available
             </div>
             
             <div class="auth-tabs">
@@ -376,6 +449,14 @@
                     <input type="password" id="user-password" class="form-control" placeholder="Enter password" required>
                 </div>
                 <button type="submit" class="btn">User Login</button>
+                
+                <!-- Google Sign-In Button -->
+                <div class="google-signin-container">
+                    <div class="divider">
+                        <span>Or continue with</span>
+                    </div>
+                    <div id="google-signin-btn" class="google-btn-wrapper"></div>
+                </div>
             </form>
             
             <!-- User Signup Form -->
@@ -393,6 +474,14 @@
                     <input type="password" id="signup-password" class="form-control" placeholder="Create password" required minlength="6">
                 </div>
                 <button type="submit" class="btn">Create Account</button>
+                
+                <!-- Google Sign-In Button -->
+                <div class="google-signin-container">
+                    <div class="divider">
+                        <span>Or sign up with</span>
+                    </div>
+                    <div id="google-signup-btn" class="google-btn-wrapper"></div>
+                </div>
             </form>
             
             <!-- Admin Login Form -->
@@ -483,6 +572,9 @@
         const ADMIN_EMAIL = "faizbabu1212@gmail.com";
         const ADMIN_PASSWORD = "admin@123";
         
+        // Google Sign-In Configuration
+        const GOOGLE_CLIENT_ID = "570763000275-dumn87kjtqad1fmos4j2lu2i29oumbjk.apps.googleusercontent.com";
+        
         // Global variables
         let currentUser = null;
         let users = [];
@@ -490,11 +582,194 @@
         
         // Initialize the application
         document.addEventListener('DOMContentLoaded', function() {
-            console.log("Chat App Started");
+            console.log("Chat App Started - Domain:", window.location.origin);
             setupEventListeners();
             loadUsers();
             checkExistingSession();
+            
+            // Initialize Google Sign-In
+            function initGoogle() {
+                if (typeof google !== 'undefined' && google.accounts) {
+                    initializeGoogleSignIn();
+                } else {
+                    setTimeout(initGoogle, 500);
+                }
+            }
+            
+            // Start initialization
+            setTimeout(initGoogle, 1000);
         });
+        
+        // Initialize Google Sign-In
+        function initializeGoogleSignIn() {
+            console.log("Initializing Google Sign-In for:", window.location.origin);
+            
+            if (typeof google === 'undefined') {
+                console.error("Google Identity Services library not loaded");
+                showFallbackGoogleButton();
+                return;
+            }
+
+            try {
+                // Google Sign-In initialize
+                google.accounts.id.initialize({
+                    client_id: GOOGLE_CLIENT_ID,
+                    callback: handleGoogleSignIn,
+                    auto_select: false,
+                    cancel_on_tap_outside: true,
+                    context: "use"
+                });
+
+                // Render login button
+                const loginBtnContainer = document.getElementById("google-signin-btn");
+                if (loginBtnContainer) {
+                    google.accounts.id.renderButton(loginBtnContainer, {
+                        theme: "outline",
+                        size: "large",
+                        width: 280,
+                        text: "signin_with",
+                        shape: "rectangular",
+                        logo_alignment: "center"
+                    });
+                }
+
+                // Render signup button
+                const signupBtnContainer = document.getElementById("google-signup-btn");
+                if (signupBtnContainer) {
+                    google.accounts.id.renderButton(signupBtnContainer, {
+                        theme: "outline",
+                        size: "large",
+                        width: 280,
+                        text: "signup_with",
+                        shape: "rectangular",
+                        logo_alignment: "center"
+                    });
+                }
+
+                console.log("Google Sign-In initialized successfully");
+
+            } catch (error) {
+                console.error("Error initializing Google Sign-In:", error);
+                showFallbackGoogleButton();
+            }
+        }
+
+        // Fallback button if Google library fails
+        function showFallbackGoogleButton() {
+            const fallbackHTML = `
+                <button type="button" class="google-btn-custom" onclick="showNotification('Google Sign-In not available. Please use email signup.', 'error')">
+                    <img src="https://developers.google.com/identity/images/g-logo.png" alt="Google" class="google-icon">
+                    Sign in with Google
+                </button>
+            `;
+            
+            const loginContainer = document.getElementById("google-signin-btn");
+            const signupContainer = document.getElementById("google-signup-btn");
+            
+            if (loginContainer) loginContainer.innerHTML = fallbackHTML;
+            if (signupContainer) signupContainer.innerHTML = fallbackHTML;
+        }
+
+        // Handle Google Sign-In Response
+        async function handleGoogleSignIn(response) {
+            console.log("Google Sign-In response received");
+            
+            try {
+                // Show loading state
+                showNotification('Signing in with Google...', 'success');
+
+                // Decode JWT token
+                const userData = parseJwt(response.credential);
+                
+                console.log("Google user data:", userData);
+                
+                // Verify email is present
+                if (!userData.email) {
+                    throw new Error("Email not found in Google response");
+                }
+
+                // Check if user exists in our database
+                const existingUser = await findUserByEmail(userData.email);
+                
+                if (existingUser) {
+                    // Existing user - direct login
+                    await handleExistingUserLogin(existingUser, userData);
+                } else {
+                    // New user - create account automatically
+                    await handleNewUserCreation(userData);
+                }
+                
+            } catch (error) {
+                console.error("Google Sign-In error:", error);
+                showNotification('Google Sign-In failed: ' + error.message, 'error');
+            }
+        }
+
+        // Handle existing user login
+        async function handleExistingUserLogin(existingUser, googleData) {
+            currentUser = {
+                id: existingUser.id,
+                name: existingUser.name || googleData.name,
+                email: existingUser.email,
+                role: 'user',
+                picture: googleData.picture || existingUser.picture
+            };
+            
+            // Update user profile with Google data if needed
+            if (googleData.picture && !existingUser.picture) {
+                await updateUserProfile(existingUser.id, { picture: googleData.picture });
+            }
+            
+            localStorage.setItem('chatUser', JSON.stringify(currentUser));
+            showChatInterface();
+            showNotification('Signed in with Google! Welcome ' + currentUser.name, 'success');
+        }
+
+        // Handle new user creation
+        async function handleNewUserCreation(googleData) {
+            const newUser = {
+                id: Date.now().toString(),
+                name: googleData.name,
+                email: googleData.email,
+                password: 'google_oauth',
+                picture: googleData.picture,
+                createdAt: new Date().toISOString(),
+                authProvider: 'google',
+                emailVerified: true
+            };
+            
+            const userRef = window.firebaseRef(window.firebaseDatabase, `users/${newUser.id}`);
+            await window.firebaseSet(userRef, newUser);
+            
+            // Auto login after signup
+            currentUser = {
+                id: newUser.id,
+                name: newUser.name,
+                email: newUser.email,
+                role: 'user',
+                picture: newUser.picture
+            };
+            
+            localStorage.setItem('chatUser', JSON.stringify(currentUser));
+            showChatInterface();
+            showNotification('Account created with Google! Welcome ' + newUser.name, 'success');
+        }
+
+        // Parse JWT token
+        function parseJwt(token) {
+            try {
+                const base64Url = token.split('.')[1];
+                const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
+                const jsonPayload = decodeURIComponent(atob(base64).split('').map(function(c) {
+                    return '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2);
+                }).join(''));
+                
+                return JSON.parse(jsonPayload);
+            } catch (e) {
+                console.error("Error parsing JWT:", e);
+                throw new Error("Invalid Google token");
+            }
+        }
         
         // Setup event listeners
         function setupEventListeners() {
@@ -529,7 +804,7 @@
                 logout();
             });
             
-            // Send message - FIXED EVENT LISTENERS
+            // Send message
             document.getElementById('send-btn').addEventListener('click', function() {
                 sendMessage();
             });
@@ -556,7 +831,7 @@
             document.getElementById(`${tabName}-form`).classList.add('active');
         }
         
-        // User login - FIXED WITH PROPER ERROR HANDLING
+        // User login
         async function userLogin() {
             const email = document.getElementById('user-email').value.trim();
             const password = document.getElementById('user-password').value;
@@ -606,7 +881,7 @@
             }
         }
         
-        // User signup - FIXED WITH VALIDATION
+        // User signup
         async function userSignup() {
             const name = document.getElementById('signup-name').value.trim();
             const email = document.getElementById('signup-email').value.trim();
@@ -667,7 +942,7 @@
             }
         }
         
-        // Admin login - FIXED
+        // Admin login
         function adminLogin() {
             const email = document.getElementById('admin-email').value;
             const password = document.getElementById('admin-password').value;
@@ -690,7 +965,7 @@
             }
         }
         
-        // Logout - FIXED
+        // Logout
         function logout() {
             if (currentUser) {
                 updateOnlineStatus(false);
@@ -710,7 +985,7 @@
             showNotification('Logged out successfully!', 'success');
         }
         
-        // Show chat interface - FIXED
+        // Show chat interface
         function showChatInterface() {
             document.getElementById('auth-container').style.display = 'none';
             document.getElementById('chat-container').style.display = 'flex';
@@ -720,9 +995,16 @@
             document.getElementById('user-role').textContent = currentUser.role === 'admin' ? 'Administrator' : 'User';
             
             const avatar = document.getElementById('user-avatar');
-            avatar.innerHTML = currentUser.role === 'admin' ? 
-                '<i class="fas fa-shield-alt"></i>' : 
-                '<i class="fas fa-user"></i>';
+            
+            // Google user के लिए profile picture display करें
+            if (currentUser.picture) {
+                avatar.innerHTML = `<img src="${currentUser.picture}" alt="Profile" style="width: 100%; height: 100%; border-radius: 50%; object-fit: cover;">`;
+            } else {
+                avatar.innerHTML = currentUser.role === 'admin' ? 
+                    '<i class="fas fa-shield-alt"></i>' : 
+                    '<i class="fas fa-user"></i>';
+            }
+            
             avatar.className = `user-avatar ${currentUser.role === 'admin' ? 'admin-avatar' : ''}`;
             
             // Load messages
@@ -740,7 +1022,7 @@
             });
         }
         
-        // Load messages from Firebase - FIXED
+        // Load messages from Firebase
         function loadMessages() {
             const messagesRef = window.firebaseRef(window.firebaseDatabase, 'messages');
             window.firebaseOnValue(messagesRef, (snapshot) => {
@@ -758,7 +1040,7 @@
             });
         }
         
-        // Send message - COMPLETELY FIXED
+        // Send message
         function sendMessage() {
             const input = document.getElementById('chat-input');
             const messageText = input.value.trim();
@@ -801,7 +1083,7 @@
                 });
         }
         
-        // Render messages - FIXED
+        // Render messages
         function renderMessages() {
             const container = document.getElementById('chat-messages');
             
@@ -882,6 +1164,34 @@
                     console.error("Error parsing saved user:", error);
                     localStorage.removeItem('chatUser');
                 }
+            }
+        }
+        
+        // Find user by email in Firebase
+        async function findUserByEmail(email) {
+            try {
+                const usersRef = window.firebaseRef(window.firebaseDatabase, 'users');
+                const snapshot = await window.firebaseGet(usersRef);
+                const usersData = snapshot.val();
+                
+                if (usersData) {
+                    const users = Object.values(usersData);
+                    return users.find(u => u.email === email);
+                }
+                return null;
+            } catch (error) {
+                console.error("Error finding user:", error);
+                return null;
+            }
+        }
+
+        // Update user profile
+        async function updateUserProfile(userId, updates) {
+            try {
+                const userRef = window.firebaseRef(window.firebaseDatabase, `users/${userId}`);
+                await window.firebaseUpdate(userRef, updates);
+            } catch (error) {
+                console.error("Error updating user profile:", error);
             }
         }
         
