@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Secure Chat Application</title>
     <script src="https://accounts.google.com/gsi/client" async defer></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <style>
         :root {
             --primary: #1a237e;
@@ -415,6 +416,197 @@
             width: 18px;
             height: 18px;
         }
+        
+        /* Voice Chat Styles */
+        .voice-chat-btn {
+            background: var(--success);
+            color: white;
+            border: none;
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.3s;
+        }
+        
+        .voice-chat-btn:hover {
+            background: #00a844;
+            transform: scale(1.1);
+        }
+        
+        .voice-chat-btn.recording {
+            background: var(--accent);
+            animation: pulse 1.5s infinite;
+        }
+        
+        @keyframes pulse {
+            0% {
+                transform: scale(1);
+                box-shadow: 0 0 0 0 rgba(255, 82, 82, 0.7);
+            }
+            70% {
+                transform: scale(1.05);
+                box-shadow: 0 0 0 10px rgba(255, 82, 82, 0);
+            }
+            100% {
+                transform: scale(1);
+                box-shadow: 0 0 0 0 rgba(255, 82, 82, 0);
+            }
+        }
+        
+        .voice-message {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 1rem;
+            max-width: 80%;
+        }
+        
+        .voice-message.user {
+            align-self: flex-end;
+            flex-direction: row-reverse;
+        }
+        
+        .voice-message.admin {
+            align-self: flex-start;
+        }
+        
+        .voice-player {
+            flex: 1;
+            background: rgba(0, 0, 0, 0.05);
+            border-radius: 20px;
+            padding: 10px 15px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .voice-player.user {
+            background: var(--user-color);
+            color: white;
+        }
+        
+        .voice-player.admin {
+            background: var(--admin-color);
+            color: white;
+        }
+        
+        .voice-play-btn {
+            background: transparent;
+            border: none;
+            color: inherit;
+            cursor: pointer;
+            font-size: 1.2rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .voice-duration {
+            font-size: 0.8rem;
+            opacity: 0.8;
+        }
+        
+        .voice-waveform {
+            flex: 1;
+            height: 30px;
+            background: rgba(255, 255, 255, 0.2);
+            border-radius: 15px;
+            overflow: hidden;
+            position: relative;
+        }
+        
+        .voice-waveform-bar {
+            position: absolute;
+            bottom: 0;
+            width: 3px;
+            background: currentColor;
+            border-radius: 2px;
+            opacity: 0.7;
+        }
+        
+        .voice-recording-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.7);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            z-index: 2000;
+            color: white;
+            display: none;
+        }
+        
+        .voice-recording-timer {
+            font-size: 2rem;
+            margin-bottom: 1rem;
+            font-weight: bold;
+        }
+        
+        .voice-recording-visualizer {
+            width: 200px;
+            height: 100px;
+            margin-bottom: 2rem;
+            position: relative;
+        }
+        
+        .voice-recording-wave {
+            position: absolute;
+            bottom: 0;
+            width: 100%;
+            height: 100%;
+            display: flex;
+            align-items: flex-end;
+            justify-content: center;
+            gap: 2px;
+        }
+        
+        .voice-recording-bar {
+            width: 4px;
+            background: white;
+            border-radius: 2px;
+            transition: height 0.1s ease;
+        }
+        
+        .voice-recording-controls {
+            display: flex;
+            gap: 20px;
+        }
+        
+        .voice-cancel-btn {
+            background: var(--accent);
+            color: white;
+            border: none;
+            width: 60px;
+            height: 60px;
+            border-radius: 50%;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.5rem;
+        }
+        
+        .voice-send-btn {
+            background: var(--success);
+            color: white;
+            border: none;
+            width: 60px;
+            height: 60px;
+            border-radius: 50%;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.5rem;
+        }
     </style>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
 </head>
@@ -429,7 +621,8 @@
         <div class="auth-container" id="auth-container">
             <div class="security-warning">
                 <i class="fas fa-shield-alt"></i> Secure Login - All data is encrypted | 
-                <i class="fab fa-google"></i> Google Sign-In Available
+                <i class="fab fa-google"></i> Google Sign-In Available |
+                <i class="fas fa-microphone"></i> Voice Chat Enabled
             </div>
             
             <div class="auth-tabs">
@@ -529,10 +722,29 @@
             
             <div class="chat-input-container">
                 <input type="text" class="chat-input" id="chat-input" placeholder="Type your message here..." maxlength="500">
+                <button class="voice-chat-btn" id="voice-chat-btn" title="Record Voice Message">
+                    <i class="fas fa-microphone"></i>
+                </button>
                 <button class="send-btn" id="send-btn">
                     <i class="fas fa-paper-plane"></i>
                 </button>
             </div>
+        </div>
+    </div>
+    
+    <!-- Voice Recording Overlay -->
+    <div class="voice-recording-overlay" id="voice-recording-overlay">
+        <div class="voice-recording-timer" id="voice-recording-timer">0:00</div>
+        <div class="voice-recording-visualizer">
+            <div class="voice-recording-wave" id="voice-recording-wave"></div>
+        </div>
+        <div class="voice-recording-controls">
+            <button class="voice-cancel-btn" id="voice-cancel-btn">
+                <i class="fas fa-times"></i>
+            </button>
+            <button class="voice-send-btn" id="voice-send-btn">
+                <i class="fas fa-check"></i>
+            </button>
         </div>
     </div>
     
@@ -568,6 +780,13 @@
     </script>
 
     <script>
+        // Supabase Configuration (Voice Storage Only)
+        const SUPABASE_URL = 'https://rlcyrjesjiirwdnbnjbh.supabase.co';
+        const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJsY3lyamVzamlpcndkbmJuamJoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjQ0MTUzNjAsImV4cCI6MjA3OTk5MTM2MH0.Onr1czu54M69Fv-xbjWuZmoWh9vNa0PUm-i1VLEncvc';
+        
+        // Initialize Supabase
+        const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+        
         // Admin credentials
         const ADMIN_EMAIL = "faizbabu1212@gmail.com";
         const ADMIN_PASSWORD = "admin@123";
@@ -580,12 +799,24 @@
         let users = [];
         let messages = [];
         
+        // Voice Chat Variables
+        let mediaRecorder = null;
+        let audioChunks = [];
+        let recordingTimer = null;
+        let recordingStartTime = null;
+        let audioContext = null;
+        let analyser = null;
+        let microphone = null;
+        let isRecording = false;
+        let hasAudioPermission = false;
+        
         // Initialize the application
         document.addEventListener('DOMContentLoaded', function() {
-            console.log("Chat App Started - Domain:", window.location.origin);
+            console.log("Chat App Started - Firebase + Supabase Hybrid");
             setupEventListeners();
             loadUsers();
             checkExistingSession();
+            initializeSupabaseStorage();
             
             // Initialize Google Sign-In
             function initGoogle() {
@@ -600,9 +831,18 @@
             setTimeout(initGoogle, 1000);
         });
         
+        // Initialize Supabase Storage Bucket
+        async function initializeSupabaseStorage() {
+            try {
+                console.log("Supabase storage initialized for voice messages");
+            } catch (error) {
+                console.error("Error initializing Supabase storage:", error);
+            }
+        }
+        
         // Initialize Google Sign-In
         function initializeGoogleSignIn() {
-            console.log("Initializing Google Sign-In for:", window.location.origin);
+            console.log("Initializing Google Sign-In");
             
             if (typeof google === 'undefined') {
                 console.error("Google Identity Services library not loaded");
@@ -813,6 +1053,303 @@
                 if (e.key === 'Enter') {
                     sendMessage();
                 }
+            });
+            
+            // Voice chat button
+            document.getElementById('voice-chat-btn').addEventListener('click', function() {
+                if (!hasAudioPermission) {
+                    requestAudioPermission();
+                } else {
+                    toggleVoiceRecording();
+                }
+            });
+            
+            // Voice recording controls
+            document.getElementById('voice-cancel-btn').addEventListener('click', function() {
+                cancelVoiceRecording();
+            });
+            
+            document.getElementById('voice-send-btn').addEventListener('click', function() {
+                stopVoiceRecording();
+            });
+        }
+        
+        // Request audio permission
+        async function requestAudioPermission() {
+            try {
+                showNotification('Requesting microphone access...', 'success');
+                
+                // Request microphone access
+                const stream = await navigator.mediaDevices.getUserMedia({ 
+                    audio: {
+                        echoCancellation: true,
+                        noiseSuppression: true,
+                        autoGainControl: true
+                    } 
+                });
+                
+                // Stop the stream immediately after getting permission
+                stream.getTracks().forEach(track => track.stop());
+                
+                hasAudioPermission = true;
+                showNotification('Microphone access granted!', 'success');
+                
+                // Start recording if user clicked the button
+                toggleVoiceRecording();
+                
+            } catch (error) {
+                console.error('Error accessing microphone:', error);
+                showNotification('Microphone access denied. Please allow microphone access to use voice chat.', 'error');
+            }
+        }
+        
+        // Toggle voice recording
+        function toggleVoiceRecording() {
+            if (isRecording) {
+                stopVoiceRecording();
+            } else {
+                startVoiceRecording();
+            }
+        }
+        
+        // Start voice recording
+        async function startVoiceRecording() {
+            try {
+                if (!hasAudioPermission) {
+                    requestAudioPermission();
+                    return;
+                }
+                
+                audioChunks = [];
+                
+                // Get microphone stream
+                const stream = await navigator.mediaDevices.getUserMedia({ 
+                    audio: {
+                        echoCancellation: true,
+                        noiseSuppression: true,
+                        autoGainControl: true,
+                        sampleRate: 44100
+                    } 
+                });
+                
+                // Setup MediaRecorder
+                const options = { 
+                    audioBitsPerSecond: 128000,
+                    mimeType: 'audio/webm;codecs=opus' 
+                };
+                
+                mediaRecorder = new MediaRecorder(stream, options);
+                
+                // Setup audio visualization
+                setupAudioVisualization(stream);
+                
+                // Handle data available event
+                mediaRecorder.ondataavailable = (event) => {
+                    if (event.data.size > 0) {
+                        audioChunks.push(event.data);
+                    }
+                };
+                
+                // Start recording
+                mediaRecorder.start(100); // Collect data every 100ms
+                isRecording = true;
+                
+                // Update UI
+                document.getElementById('voice-chat-btn').classList.add('recording');
+                document.getElementById('voice-recording-overlay').style.display = 'flex';
+                
+                // Start timer
+                recordingStartTime = Date.now();
+                updateRecordingTimer();
+                recordingTimer = setInterval(updateRecordingTimer, 1000);
+                
+                // Update visualizer
+                updateVisualizer();
+                
+            } catch (error) {
+                console.error('Error starting voice recording:', error);
+                showNotification('Error starting voice recording: ' + error.message, 'error');
+            }
+        }
+        
+        // Stop voice recording
+        async function stopVoiceRecording() {
+            if (!mediaRecorder || !isRecording) return;
+            
+            // Stop recording
+            mediaRecorder.stop();
+            isRecording = false;
+            
+            // Stop all tracks
+            mediaRecorder.stream.getTracks().forEach(track => track.stop());
+            
+            // Clean up
+            clearInterval(recordingTimer);
+            document.getElementById('voice-chat-btn').classList.remove('recording');
+            document.getElementById('voice-recording-overlay').style.display = 'none';
+            
+            // Handle recording stopped
+            mediaRecorder.onstop = async () => {
+                try {
+                    // Create audio blob
+                    const audioBlob = new Blob(audioChunks, { type: 'audio/webm;codecs=opus' });
+                    
+                    // Calculate duration
+                    const duration = Math.floor((Date.now() - recordingStartTime) / 1000);
+                    
+                    // Upload to Supabase Storage
+                    await uploadVoiceMessage(audioBlob, duration);
+                    
+                } catch (error) {
+                    console.error('Error processing voice recording:', error);
+                    showNotification('Error sending voice message', 'error');
+                }
+            };
+            
+            // Clean up audio context
+            if (audioContext) {
+                audioContext.close();
+                audioContext = null;
+            }
+        }
+        
+        // Upload voice message to Supabase
+        async function uploadVoiceMessage(audioBlob, duration) {
+            try {
+                showNotification('Uploading voice message...', 'success');
+                
+                // Generate unique filename
+                const fileName = `voice_${currentUser.id}_${Date.now()}.webm`;
+                
+                // Upload to Supabase Storage
+                const { data, error } = await supabase.storage
+                    .from('voice-messages')
+                    .upload(fileName, audioBlob);
+                
+                if (error) throw error;
+                
+                // Get public URL
+                const { data: urlData } = supabase.storage
+                    .from('voice-messages')
+                    .getPublicUrl(fileName);
+                
+                // Save message to Firebase (with Supabase URL)
+                const message = {
+                    id: Date.now().toString(),
+                    type: 'voice',
+                    audio_url: urlData.publicUrl,
+                    duration: duration,
+                    senderId: currentUser.id,
+                    senderName: currentUser.name,
+                    senderRole: currentUser.role,
+                    timestamp: new Date().toISOString()
+                };
+                
+                const messageRef = window.firebaseRef(window.firebaseDatabase, `messages/${message.id}`);
+                await window.firebaseSet(messageRef, message);
+                
+                showNotification('Voice message sent!', 'success');
+                
+            } catch (error) {
+                console.error('Error uploading voice message:', error);
+                showNotification('Error sending voice message: ' + error.message, 'error');
+            }
+        }
+        
+        // Cancel voice recording
+        function cancelVoiceRecording() {
+            if (!mediaRecorder || !isRecording) return;
+            
+            // Stop recording
+            mediaRecorder.stop();
+            isRecording = false;
+            
+            // Stop all tracks
+            mediaRecorder.stream.getTracks().forEach(track => track.stop());
+            
+            // Clean up
+            clearInterval(recordingTimer);
+            document.getElementById('voice-chat-btn').classList.remove('recording');
+            document.getElementById('voice-recording-overlay').style.display = 'none';
+            
+            // Clean up audio context
+            if (audioContext) {
+                audioContext.close();
+                audioContext = null;
+            }
+            
+            showNotification('Voice recording cancelled', 'success');
+        }
+        
+        // Update recording timer
+        function updateRecordingTimer() {
+            if (!recordingStartTime) return;
+            
+            const elapsed = Math.floor((Date.now() - recordingStartTime) / 1000);
+            const minutes = Math.floor(elapsed / 60);
+            const seconds = elapsed % 60;
+            
+            document.getElementById('voice-recording-timer').textContent = 
+                `${minutes}:${seconds.toString().padStart(2, '0')}`;
+        }
+        
+        // Setup audio visualization
+        function setupAudioVisualization(stream) {
+            try {
+                // Create audio context
+                audioContext = new (window.AudioContext || window.webkitAudioContext)();
+                analyser = audioContext.createAnalyser();
+                microphone = audioContext.createMediaStreamSource(stream);
+                
+                // Setup analyser
+                analyser.fftSize = 256;
+                analyser.smoothingTimeConstant = 0.8;
+                microphone.connect(analyser);
+                
+            } catch (error) {
+                console.error('Error setting up audio visualization:', error);
+            }
+        }
+        
+        // Update visualizer
+        function updateVisualizer() {
+            if (!isRecording || !analyser) return;
+            
+            const waveContainer = document.getElementById('voice-recording-wave');
+            waveContainer.innerHTML = '';
+            
+            // Get frequency data
+            const bufferLength = analyser.frequencyBinCount;
+            const dataArray = new Uint8Array(bufferLength);
+            analyser.getByteFrequencyData(dataArray);
+            
+            // Create bars
+            const barCount = 30;
+            for (let i = 0; i < barCount; i++) {
+                const bar = document.createElement('div');
+                bar.className = 'voice-recording-bar';
+                
+                // Calculate height based on frequency data
+                const index = Math.floor(i * bufferLength / barCount);
+                const value = dataArray[index] / 255;
+                const height = Math.max(5, value * 100);
+                
+                bar.style.height = `${height}%`;
+                waveContainer.appendChild(bar);
+            }
+            
+            // Continue animation
+            if (isRecording) {
+                requestAnimationFrame(updateVisualizer);
+            }
+        }
+        
+        // Play voice message
+        function playVoiceMessage(audioUrl) {
+            const audio = new Audio(audioUrl);
+            audio.play().catch(error => {
+                console.error('Error playing audio:', error);
+                showNotification('Error playing voice message', 'error');
             });
         }
         
@@ -1106,23 +1643,61 @@
             messages.sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp));
             
             messages.forEach(message => {
-                const messageDiv = document.createElement('div');
-                messageDiv.className = `message ${message.senderRole}`;
-                
-                const time = new Date(message.timestamp).toLocaleTimeString([], { 
-                    hour: '2-digit', 
-                    minute: '2-digit' 
-                });
-                
-                messageDiv.innerHTML = `
-                    <div class="message-sender">
-                        ${escapeHtml(message.senderName)} ${message.senderRole === 'admin' ? '👑' : ''}
-                    </div>
-                    <div class="message-text">${escapeHtml(message.text)}</div>
-                    <div class="message-time">${time}</div>
-                `;
-                
-                container.appendChild(messageDiv);
+                if (message.type === 'voice') {
+                    // Render voice message
+                    const messageDiv = document.createElement('div');
+                    messageDiv.className = `voice-message ${message.senderRole}`;
+                    
+                    const time = new Date(message.timestamp).toLocaleTimeString([], { 
+                        hour: '2-digit', 
+                        minute: '2-digit' 
+                    });
+                    
+                    // Generate waveform bars
+                    let waveformHTML = '';
+                    const barCount = 20;
+                    for (let i = 0; i < barCount; i++) {
+                        const height = Math.floor(Math.random() * 20) + 5;
+                        waveformHTML += `<div class="voice-waveform-bar" style="height: ${height}px; left: ${i * 5}px;"></div>`;
+                    }
+                    
+                    messageDiv.innerHTML = `
+                        <div class="voice-player ${message.senderRole}">
+                            <button class="voice-play-btn" onclick="playVoiceMessage('${message.audio_url}')">
+                                <i class="fas fa-play"></i>
+                            </button>
+                            <div class="voice-waveform">
+                                ${waveformHTML}
+                            </div>
+                            <div class="voice-duration">${message.duration}s</div>
+                        </div>
+                        <div class="message-sender">
+                            ${escapeHtml(message.senderName)} ${message.senderRole === 'admin' ? '👑' : ''}
+                            <div class="message-time">${time}</div>
+                        </div>
+                    `;
+                    
+                    container.appendChild(messageDiv);
+                } else {
+                    // Render text message
+                    const messageDiv = document.createElement('div');
+                    messageDiv.className = `message ${message.senderRole}`;
+                    
+                    const time = new Date(message.timestamp).toLocaleTimeString([], { 
+                        hour: '2-digit', 
+                        minute: '2-digit' 
+                    });
+                    
+                    messageDiv.innerHTML = `
+                        <div class="message-sender">
+                            ${escapeHtml(message.senderName)} ${message.senderRole === 'admin' ? '👑' : ''}
+                        </div>
+                        <div class="message-text">${escapeHtml(message.text)}</div>
+                        <div class="message-time">${time}</div>
+                    `;
+                    
+                    container.appendChild(messageDiv);
+                }
             });
         }
         
