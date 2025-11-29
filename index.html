@@ -798,6 +798,7 @@
         let currentUser = null;
         let users = [];
         let messages = [];
+        let currentMessageListener = null;
         
         // Voice Chat Variables
         let mediaRecorder = null;
@@ -1508,6 +1509,12 @@
                 updateOnlineStatus(false);
             }
             
+            // Remove message listener
+            if (currentMessageListener) {
+                currentMessageListener();
+                currentMessageListener = null;
+            }
+            
             currentUser = null;
             localStorage.removeItem('chatUser');
             
@@ -1559,22 +1566,135 @@
             });
         }
         
-        // Load messages from Firebase
+        // Load messages from Firebase (FIXED VERSION)
         function loadMessages() {
+            // Remove existing listener if any
+            if (currentMessageListener) {
+                currentMessageListener();
+            }
+            
             const messagesRef = window.firebaseRef(window.firebaseDatabase, 'messages');
-            window.firebaseOnValue(messagesRef, (snapshot) => {
+            currentMessageListener = window.firebaseOnValue(messagesRef, (snapshot) => {
                 const data = snapshot.val();
-                messages = data ? Object.values(data) : [];
-                renderMessages();
                 
-                // Auto scroll to bottom
-                setTimeout(() => {
-                    const messagesContainer = document.getElementById('chat-messages');
-                    if (messagesContainer) {
-                        messagesContainer.scrollTop = messagesContainer.scrollHeight;
-                    }
-                }, 100);
+                // Convert Firebase object to array properly
+                if (data) {
+                    messages = Object.keys(data).map(key => {
+                        const message = data[key];
+                        return {
+                            id: key,
+                            text: message.text,
+                            type: message.type,
+                            senderId: message.senderId,
+                            senderName: message.senderName,
+                            senderRole: message.senderRole,
+                            timestamp: message.timestamp,
+                            audio_url: message.audio_url,
+                            duration: message.duration
+                        };
+                    }).filter(msg => msg !== null); // Remove null messages
+                } else {
+                    messages = [];
+                }
+                
+                console.log(`Loaded ${messages.length} messages`);
+                renderMessages();
             });
+        }
+
+        // Render messages (FIXED VERSION)
+        function renderMessages() {
+            const container = document.getElementById('chat-messages');
+            
+            if (!container) return;
+            
+            // Clear container
+            container.innerHTML = '';
+            
+            if (messages.length === 0) {
+                container.innerHTML = `
+                    <div class="welcome-message">
+                        <i class="fas fa-comments" style="font-size: 3rem; margin-bottom: 1rem;"></i>
+                        <h3>No messages yet</h3>
+                        <p>Be the first to start the conversation!</p>
+                    </div>
+                `;
+                return;
+            }
+            
+            // Sort messages by timestamp
+            const sortedMessages = [...messages].sort((a, b) => {
+                try {
+                    const timeA = new Date(a.timestamp).getTime();
+                    const timeB = new Date(b.timestamp).getTime();
+                    return timeA - timeB; // Oldest first
+                } catch (error) {
+                    console.error("Timestamp sorting error:", error);
+                    return 0;
+                }
+            });
+            
+            console.log("Rendering sorted messages:", sortedMessages);
+            
+            // Render each message
+            sortedMessages.forEach(message => {
+                if (!message) return;
+                
+                const time = new Date(message.timestamp).toLocaleTimeString('en-IN', { 
+                    hour: '2-digit', 
+                    minute: '2-digit' 
+                });
+                
+                if (message.type === 'voice') {
+                    // Voice message
+                    const messageDiv = document.createElement('div');
+                    messageDiv.className = `voice-message ${message.senderRole}`;
+                    
+                    let waveformHTML = '';
+                    const barCount = 20;
+                    for (let i = 0; i < barCount; i++) {
+                        const height = Math.floor(Math.random() * 20) + 5;
+                        waveformHTML += `<div class="voice-waveform-bar" style="height: ${height}px; left: ${i * 5}px;"></div>`;
+                    }
+                    
+                    messageDiv.innerHTML = `
+                        <div class="voice-player ${message.senderRole}">
+                            <button class="voice-play-btn" onclick="playVoiceMessage('${message.audio_url}')">
+                                <i class="fas fa-play"></i>
+                            </button>
+                            <div class="voice-waveform">
+                                ${waveformHTML}
+                            </div>
+                            <div class="voice-duration">${message.duration}s</div>
+                        </div>
+                        <div class="message-sender">
+                            ${escapeHtml(message.senderName)} ${message.senderRole === 'admin' ? '👑' : ''}
+                            <div class="message-time">${time}</div>
+                        </div>
+                    `;
+                    
+                    container.appendChild(messageDiv);
+                } else {
+                    // Text message
+                    const messageDiv = document.createElement('div');
+                    messageDiv.className = `message ${message.senderRole}`;
+                    
+                    messageDiv.innerHTML = `
+                        <div class="message-sender">
+                            ${escapeHtml(message.senderName)} ${message.senderRole === 'admin' ? '👑' : ''}
+                        </div>
+                        <div class="message-text">${escapeHtml(message.text)}</div>
+                        <div class="message-time">${time}</div>
+                    `;
+                    
+                    container.appendChild(messageDiv);
+                }
+            });
+            
+            // Auto scroll to bottom
+            setTimeout(() => {
+                container.scrollTop = container.scrollHeight;
+            }, 100);
         }
         
         // Send message
@@ -1618,87 +1738,6 @@
                     console.error("Send message error:", error);
                     showNotification('Error sending message! Please try again.', 'error');
                 });
-        }
-        
-        // Render messages
-        function renderMessages() {
-            const container = document.getElementById('chat-messages');
-            
-            if (!container) return;
-            
-            if (messages.length === 0) {
-                container.innerHTML = `
-                    <div class="welcome-message">
-                        <i class="fas fa-comments" style="font-size: 3rem; margin-bottom: 1rem;"></i>
-                        <h3>No messages yet</h3>
-                        <p>Be the first to start the conversation!</p>
-                    </div>
-                `;
-                return;
-            }
-            
-            container.innerHTML = '';
-            
-            // Sort messages by timestamp
-            messages.sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp));
-            
-            messages.forEach(message => {
-                if (message.type === 'voice') {
-                    // Render voice message
-                    const messageDiv = document.createElement('div');
-                    messageDiv.className = `voice-message ${message.senderRole}`;
-                    
-                    const time = new Date(message.timestamp).toLocaleTimeString([], { 
-                        hour: '2-digit', 
-                        minute: '2-digit' 
-                    });
-                    
-                    // Generate waveform bars
-                    let waveformHTML = '';
-                    const barCount = 20;
-                    for (let i = 0; i < barCount; i++) {
-                        const height = Math.floor(Math.random() * 20) + 5;
-                        waveformHTML += `<div class="voice-waveform-bar" style="height: ${height}px; left: ${i * 5}px;"></div>`;
-                    }
-                    
-                    messageDiv.innerHTML = `
-                        <div class="voice-player ${message.senderRole}">
-                            <button class="voice-play-btn" onclick="playVoiceMessage('${message.audio_url}')">
-                                <i class="fas fa-play"></i>
-                            </button>
-                            <div class="voice-waveform">
-                                ${waveformHTML}
-                            </div>
-                            <div class="voice-duration">${message.duration}s</div>
-                        </div>
-                        <div class="message-sender">
-                            ${escapeHtml(message.senderName)} ${message.senderRole === 'admin' ? '👑' : ''}
-                            <div class="message-time">${time}</div>
-                        </div>
-                    `;
-                    
-                    container.appendChild(messageDiv);
-                } else {
-                    // Render text message
-                    const messageDiv = document.createElement('div');
-                    messageDiv.className = `message ${message.senderRole}`;
-                    
-                    const time = new Date(message.timestamp).toLocaleTimeString([], { 
-                        hour: '2-digit', 
-                        minute: '2-digit' 
-                    });
-                    
-                    messageDiv.innerHTML = `
-                        <div class="message-sender">
-                            ${escapeHtml(message.senderName)} ${message.senderRole === 'admin' ? '👑' : ''}
-                        </div>
-                        <div class="message-text">${escapeHtml(message.text)}</div>
-                        <div class="message-time">${time}</div>
-                    `;
-                    
-                    container.appendChild(messageDiv);
-                }
-            });
         }
         
         // Update online status
