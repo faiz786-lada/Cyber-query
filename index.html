@@ -816,7 +816,6 @@
             setupEventListeners();
             loadUsers();
             checkExistingSession();
-            initializeSupabaseStorage();
             
             // Initialize Google Sign-In
             function initGoogle() {
@@ -830,15 +829,6 @@
             // Start initialization
             setTimeout(initGoogle, 1000);
         });
-        
-        // Initialize Supabase Storage Bucket
-        async function initializeSupabaseStorage() {
-            try {
-                console.log("Supabase storage initialized for voice messages");
-            } catch (error) {
-                console.error("Error initializing Supabase storage:", error);
-            }
-        }
         
         // Initialize Google Sign-In
         function initializeGoogleSignIn() {
@@ -1202,7 +1192,7 @@
                     
                 } catch (error) {
                     console.error('Error processing voice recording:', error);
-                    showNotification('Error sending voice message', 'error');
+                    showNotification('Error sending voice message: ' + error.message, 'error');
                 }
             };
             
@@ -1233,7 +1223,7 @@
                     .from('voice-messages')
                     .getPublicUrl(fileName);
                 
-                // Save message to Firebase (with Supabase URL)
+                // Save message to Firebase (with Supabase URL) - SUPABASE TABLE SKIP
                 const message = {
                     id: Date.now().toString(),
                     type: 'voice',
@@ -1244,7 +1234,8 @@
                     senderRole: currentUser.role,
                     timestamp: new Date().toISOString()
                 };
-                
+
+                // SIRF FIREBASE MEIN SAVE KARO - Supabase table skip
                 const messageRef = window.firebaseRef(window.firebaseDatabase, `messages/${message.id}`);
                 await window.firebaseSet(messageRef, message);
                 
