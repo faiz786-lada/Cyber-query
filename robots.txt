@@ -1,33 +1,16 @@
 User-agent: *
 Allow: /
-Disallow: /admin/
-Disallow: /private/
-Disallow: /dashboard/
-Disallow: /login/
-Disallow: /wp-admin/
-Disallow: /search/
+Disallow: /admin
+Disallow: /private
+
+# Firebase explicitly allow 
+Allow: /.lp
+Allow: /world-of-cybersecurity-e3869-default-rtdb.firebaseio.com/
+
+# Googlebot 
+User-agent: Googlebot
+Allow: /.lp
+Allow: /world-of-cybersecurity-e3869-default-rtdb.firebaseio.com/.lp
 Crawl-delay: 2
 
-# Firebase और अन्य तृतीय-पक्ष सेवाओं के लिए अनुमति
-User-agent: Googlebot
-Allow: /wp-content/uploads/
-Allow: /.lp
-Allow: /firebaseio.com/
-
-# अन्य बॉट्स को सीमित करें
-User-agent: AhrefsBot
-Crawl-delay: 10
-Disallow: /api/
-
-User-agent: SemrushBot
-Crawl-delay: 10
-Disallow: /api/
-
-User-agent: MJ12bot
-Disallow: /
-
-User-agent: dotbot
-Disallow: /
-
-# साइटमैप
 Sitemap: https://theworlofcybersecurity.work.gd/sitemap.xml
